@@ -1,9 +1,35 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'YOUR_SUPABASE_URL'
-const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY'
+// TODO: Replace these with your actual Supabase project credentials
+// Get them from: Supabase Dashboard > Settings > API
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co'
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key'
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Create a dummy client for now to prevent errors
+let supabase: any
+
+try {
+  supabase = createClient(supabaseUrl, supabaseAnonKey)
+} catch (error) {
+  console.warn('Supabase client creation failed. Please update your credentials in src/lib/supabase.ts')
+  // Create a mock client to prevent app crashes
+  supabase = {
+    auth: {
+      getUser: () => Promise.resolve({ data: { user: null } }),
+      getSession: () => Promise.resolve({ data: { session: null } }),
+      signInWithPassword: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+      signUp: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+      signOut: () => Promise.resolve({ error: null })
+    },
+    from: () => ({
+      select: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }),
+      insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }),
+      update: () => ({ eq: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }) })
+    })
+  }
+}
+
+export { supabase }
 
 // Database types
 export interface Profile {
