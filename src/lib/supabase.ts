@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 // TODO: Replace these with your actual Supabase project credentials
 // Get them from: Supabase Dashboard > Settings > API
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co'
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://clzswgzknkgjfreceack.supabase.co'
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key'
 
 // Create a dummy client for now to prevent errors
