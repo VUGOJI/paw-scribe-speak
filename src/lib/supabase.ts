@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js'
 
 // TODO: Replace these with your actual Supabase project credentials
 // Get them from: Supabase Dashboard > Settings > API
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://clzswgzknkgjfreceack.supabase.co'
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsenN3Z3prbmtnamZyZWNlYWNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTc5NjUsImV4cCI6MjA3MTg5Mzk2NX0.mO9Rrn0KIUd29EWoqidSJPgghk_6jL_QZnp43COa5oA'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://clzswgzknkgjfreceack.supabase.co'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsenN3Z3prbmtnamZyZWNlYWNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTc5NjUsImV4cCI6MjA3MTg5Mzk2NX0.mO9Rrn0KIUd29EWoqidSJPgghk_6jL_QZnp43COa5oA'
 
 // Create a dummy client for now to prevent errors
 let supabase: any
