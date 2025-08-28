@@ -15,22 +15,23 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
-  const { user, loading } = useAuth();
+  // Temporarily disable auth to show preview
+  // const { user, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-soft flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-muted-foreground">Loading Pet Translator...</p>
-        </div>
-      </div>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <div className="min-h-screen bg-gradient-soft flex items-center justify-center">
+  //       <div className="text-center space-y-4">
+  //         <div className="w-16 h-16 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+  //         <p className="text-muted-foreground">Loading Pet Translator...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
-  if (!user) {
-    return <Auth />;
-  }
+  // if (!user) {
+  //   return <Auth />;
+  // }
 
   return (
     <BrowserRouter>
