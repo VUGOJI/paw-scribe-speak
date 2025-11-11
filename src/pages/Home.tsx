@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Volume2, Share2, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import RecordButton from "@/components/RecordButton";
@@ -8,48 +7,105 @@ import PetAnimation from "@/components/PetAnimation";
 import TreatPoints from "@/components/TreatPoints";
 import Navigation from "@/components/Navigation";
 import { useToast } from "@/hooks/use-toast";
-import heroBackground from "@/assets/hero-background.png";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import { useTranslatePetSound } from "@/hooks/useTranslations";
+import { usePets } from "@/hooks/usePets";
 
 const Home = () => {
-  const [isRecording, setIsRecording] = useState(false);
-  const [currentPet] = useState<"dog" | "cat" | "bird">("dog");
-  const [treatPoints] = useState(1247);
+  const [currentPet, setCurrentPet] = useState<"dog" | "cat" | "bird">("dog");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { data: pets } = usePets();
+  const { isRecording, audioBlob, startRecording, stopRecording, clearRecording } = useAudioRecorder();
+  const translateMutation = useTranslatePetSound();
 
-  const handleStartRecording = () => {
-    setIsRecording(true);
+  const handleStartRecording = async () => {
+    await startRecording();
     toast({
       title: "Recording started! 🎤",
       description: "Listening to your pet...",
     });
   };
 
-  const handleStopRecording = () => {
-    setIsRecording(false);
-    // Simulate processing time
-    setTimeout(() => {
-      navigate("/result", { 
-        state: { 
-          translation: "I'm so hungry! Where are my treats, human?",
-          petType: currentPet,
-          isNew: true
-        }
-      });
-    }, 1500);
+  const handleStopRecording = async () => {
+    stopRecording();
     
     toast({
       title: "Processing... 🧠",
       description: "Translating your pet's message!",
     });
+
+    // Wait a bit for the blob to be ready
+    setTimeout(async () => {
+      if (audioBlob) {
+        try {
+          // Convert blob to base64
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = async () => {
+            const base64Audio = reader.result as string;
+            const base64Data = base64Audio.split(',')[1];
+            
+            const activePet = pets?.find(p => p.type === currentPet) || pets?.[0];
+            
+            const result = await translateMutation.mutateAsync({
+              petType: currentPet,
+              petId: activePet?.id || 'default',
+              audioUrl: base64Data,
+            });
+
+            clearRecording();
+            navigate("/result", { 
+              state: { 
+                translation: result.translation,
+                petType: currentPet,
+                confidence: result.confidence,
+                isNew: true
+              }
+            });
+          };
+        } catch (error) {
+          console.error('Translation error:', error);
+        }
+      }
+    }, 500);
   };
 
   const quickModes = [
-    { emoji: "🍖", label: "Hungry", color: "bg-pet-orange" },
-    { emoji: "🎾", label: "Playful", color: "bg-primary" },
-    { emoji: "😾", label: "Moody", color: "bg-pet-purple" },
-    { emoji: "💤", label: "Sleepy", color: "bg-secondary" },
+    { emoji: "🍖", label: "Hungry", mode: "hungry", color: "bg-pet-orange" },
+    { emoji: "🎾", label: "Playful", mode: "playful", color: "bg-primary" },
+    { emoji: "😾", label: "Moody", mode: "moody", color: "bg-pet-purple" },
+    { emoji: "💤", label: "Sleepy", mode: "sleepy", color: "bg-secondary" },
   ];
+
+  const handleQuickMode = async (mode: string) => {
+    try {
+      const activePet = pets?.find(p => p.type === currentPet) || pets?.[0];
+      
+      toast({
+        title: "Translating... 🧠",
+        description: `Understanding your ${currentPet}'s ${mode} mood...`,
+      });
+
+      const result = await translateMutation.mutateAsync({
+        petType: currentPet,
+        petId: activePet?.id || 'default',
+        mode: mode,
+      });
+
+      navigate("/result", { 
+        state: { 
+          translation: result.translation,
+          petType: currentPet,
+          mode: mode,
+          confidence: result.confidence,
+          isNew: true
+        }
+      });
+    } catch (error) {
+      console.error('Quick mode error:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-soft pb-20">
@@ -59,7 +115,22 @@ const Home = () => {
           <h1 className="text-2xl font-bold text-foreground">Pet Translator</h1>
           <p className="text-sm text-muted-foreground">What's your pet saying?</p>
         </div>
-        <TreatPoints points={treatPoints} />
+        <TreatPoints points={1247} />
+      </div>
+
+      {/* Pet Selector */}
+      <div className="flex justify-center gap-3 px-4 mt-4">
+        {(['dog', 'cat', 'bird'] as const).map((pet) => (
+          <Button
+            key={pet}
+            variant={currentPet === pet ? "default" : "outline"}
+            size="sm"
+            onClick={() => setCurrentPet(pet)}
+            className="capitalize"
+          >
+            {pet === 'dog' && '🐕'} {pet === 'cat' && '🐱'} {pet === 'bird' && '🐦'} {pet}
+          </Button>
+        ))}
       </div>
 
       {/* Main Content */}
@@ -86,17 +157,9 @@ const Home = () => {
               <Button
                 key={mode.label}
                 variant="outline"
-                className={`h-16 flex flex-col gap-1 ${mode.color} text-white border-none hover:opacity-90 transition-all duration-300`}
-                onClick={() => {
-                  navigate("/result", { 
-                    state: { 
-                      translation: `I'm feeling ${mode.label.toLowerCase()}!`,
-                      petType: currentPet,
-                      mode: mode.label.toLowerCase(),
-                      isNew: true
-                    }
-                  });
-                }}
+                disabled={translateMutation.isPending}
+                className={`h-16 flex flex-col gap-1 ${mode.color} text-white border-none hover:opacity-90 transition-all duration-300 disabled:opacity-50`}
+                onClick={() => handleQuickMode(mode.mode)}
               >
                 <span className="text-2xl">{mode.emoji}</span>
                 <span className="text-sm font-medium">{mode.label}</span>

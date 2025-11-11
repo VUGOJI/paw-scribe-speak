@@ -124,12 +124,17 @@
   }
   
   .record-button {
-    @apply relative w-24 h-24 rounded-full;
-    @apply bg-gradient-to-br from-primary to-secondary;
-    @apply shadow-strong hover:shadow-xl;
-    @apply transform transition-all duration-300;
-    @apply hover:scale-110 active:scale-95;
-    @apply border-4 border-white/20;
+    @apply relative w-28 h-28 rounded-full;
+    @apply bg-gradient-to-br from-primary via-secondary to-accent;
+    @apply shadow-[0_0_40px_-5px] shadow-primary/50;
+    @apply transform transition-all duration-500;
+    @apply hover:scale-110 active:scale-95 hover:rotate-3;
+    @apply border-4 border-white/30;
+    @apply cursor-pointer;
+  }
+  
+  .record-button:hover {
+    @apply shadow-[0_0_60px_-5px] shadow-primary/70;
   }
   
   .treat-point {

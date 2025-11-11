@@ -1,19 +1,18 @@
-import { useState } from "react";
 import { Mic, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RecordButtonProps {
-  onStartRecording: () => void;
-  onStopRecording: () => void;
+  onStartRecording: () => Promise<void>;
+  onStopRecording: () => Promise<void>;
   isRecording: boolean;
 }
 
 const RecordButton = ({ onStartRecording, onStopRecording, isRecording }: RecordButtonProps) => {
-  const handleClick = () => {
+  const handleClick = async () => {
     if (isRecording) {
-      onStopRecording();
+      await onStopRecording();
     } else {
-      onStartRecording();
+      await onStartRecording();
     }
   };
 
