@@ -5,8 +5,31 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import Navigation from "@/components/Navigation";
 import TreatPoints from "@/components/TreatPoints";
+import { useAuth } from "@/components/AuthProvider";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const Settings = () => {
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "Come back soon! 👋",
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Error signing out",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
   const settingsGroups = [
     {
       title: "Account",
@@ -115,8 +138,10 @@ const Settings = () => {
               <User className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-foreground">Pet Parent</h3>
-              <p className="text-sm text-muted-foreground">member@pettranslator.com</p>
+              <h3 className="font-semibold text-foreground">
+                {user?.user_metadata?.display_name || user?.user_metadata?.username || "Pet Parent"}
+              </h3>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
             </div>
             <div className="text-right">
               <div className="text-sm font-medium text-primary">Free Plan</div>
@@ -174,6 +199,7 @@ const Settings = () => {
         <Button
           variant="outline"
           className="w-full text-destructive border-destructive hover:bg-destructive hover:text-white"
+          onClick={handleSignOut}
         >
           <LogOut className="w-4 h-4 mr-2" />
           Sign Out
