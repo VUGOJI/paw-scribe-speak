@@ -28,20 +28,20 @@ const AppContent = () => {
     );
   }
 
-  if (!user) {
-    return <Auth />;
-  }
-
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/result" element={<TranslationResult />} />
-        <Route path="/pets" element={<Pets />} />
-        <Route path="/premium" element={<Premium />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      {!user ? (
+        <Auth />
+      ) : (
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/result" element={<TranslationResult />} />
+          <Route path="/pets" element={<Pets />} />
+          <Route path="/premium" element={<Premium />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      )}
     </BrowserRouter>
   );
 };
