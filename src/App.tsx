@@ -11,6 +11,8 @@ import Pets from "./pages/Pets";
 import Premium from "./pages/Premium";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import AdminLogin from "./pages/AdminLogin";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -30,18 +32,25 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
-      {!user ? (
-        <Auth />
-      ) : (
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/result" element={<TranslationResult />} />
-          <Route path="/pets" element={<Pets />} />
-          <Route path="/premium" element={<Premium />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      )}
+      <Routes>
+        {/* Admin routes - accessible without regular user auth */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        
+        {/* Regular user routes */}
+        {!user ? (
+          <Route path="*" element={<Auth />} />
+        ) : (
+          <>
+            <Route path="/" element={<Home />} />
+            <Route path="/result" element={<TranslationResult />} />
+            <Route path="/pets" element={<Pets />} />
+            <Route path="/premium" element={<Premium />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<NotFound />} />
+          </>
+        )}
+      </Routes>
     </BrowserRouter>
   );
 };
