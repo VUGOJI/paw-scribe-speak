@@ -1,34 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
-
-// TODO: Replace these with your actual Supabase project credentials
-// Get them from: Supabase Dashboard > Settings > API
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://clzswgzknkgjfreceack.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsenN3Z3prbmtnamZyZWNlYWNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTc5NjUsImV4cCI6MjA3MTg5Mzk2NX0.mO9Rrn0KIUd29EWoqidSJPgghk_6jL_QZnp43COa5oA'
-
-// Create a dummy client for now to prevent errors
-let supabase: any
-
-try {
-  supabase = createClient(supabaseUrl, supabaseAnonKey)
-} catch (error) {
-  console.warn('Supabase client creation failed. Please update your credentials in src/lib/supabase.ts')
-  // Create a mock client to prevent app crashes
-  supabase = {
-    auth: {
-      getUser: () => Promise.resolve({ data: { user: null } }),
-      getSession: () => Promise.resolve({ data: { session: null } }),
-      signInWithPassword: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-      signUp: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-      signOut: () => Promise.resolve({ error: null })
-    },
-    from: () => ({
-      select: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }),
-      insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }),
-      update: () => ({ eq: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }) })
-    })
-  }
-}
-
+// Import and re-export the official Supabase client
+import { supabase } from '@/integrations/supabase/client'
 export { supabase }
 
 // Database types
