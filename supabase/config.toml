@@ -1,1 +1,7 @@
 project_id = "fgffrxxltyoafljbvlil"
+
+[functions.translate-pet-sound]
+verify_jwt = true
+
+[functions.increment-treat-points]
+verify_jwt = true

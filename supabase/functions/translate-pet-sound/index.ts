@@ -6,227 +6,154 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface TranslationRequest {
-  petType: string;
-  mode?: string;
-  audioUrl?: string;
-  petId: string;
-}
-
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
+    const { petType, petId, mode, audioUrl } = await req.json()
+    console.log('Translation request:', { petType, petId, mode })
+
+    // Get LOVABLE_API_KEY from environment
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY not configured')
+    }
+
     // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false
-        }
-      }
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Get user from request
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('No authorization header')
+    }
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
     )
 
-    // Get user from authorization header
-    const authHeader = req.headers.get('Authorization')!
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user } } = await supabaseClient.auth.getUser(token)
-
-    if (!user) {
-      return new Response('Unauthorized', { status: 401, headers: corsHeaders })
+    if (userError || !user) {
+      throw new Error('Unauthorized')
     }
 
-    const { petType, mode, audioUrl, petId }: TranslationRequest = await req.json()
-
-    // Generate fun pet translations based on type and mode
-    const translations = {
-      dog: {
-        hungry: [
-          "I smell treats in the kitchen! Time for dinner?",
-          "My bowl is suspiciously empty, human!",
-          "Remember when you used to feed me? Good times...",
-          "I haven't eaten in... *checks watch* ...20 minutes!"
-        ],
-        playful: [
-          "BALL! Did someone say BALL?!",
-          "Zoomies time! Clear the living room!",
-          "I challenge you to a game of tug-of-war!",
-          "Let's go outside and chase ALL the squirrels!"
-        ],
-        moody: [
-          "You're home late. I'm not happy about this.",
-          "The cat got my favorite spot on the couch again.",
-          "I saw you pet the neighbor's dog. We need to talk.",
-          "My kibble better be the good brand today."
-        ],
-        sleepy: [
-          "Five more minutes... just five more...",
-          "The sun spot on the carpet is calling my name.",
-          "I'm not lazy, I'm energy efficient.",
-          "Nap time is the best time of day."
-        ],
-        default: [
-          "I love you so much, human!",
-          "Today is the BEST day ever!",
-          "I wonder what adventure we'll have today?",
-          "You're the best pack leader ever!"
-        ]
-      },
-      cat: {
-        hungry: [
-          "My food bowl is merely half full. This is unacceptable.",
-          "I require the finest tuna, served at room temperature.",
-          "Human, your services are needed in the kitchen.",
-          "That's not the good food. I want the GOOD food."
-        ],
-        playful: [
-          "I shall now demonstrate my hunting prowess on this feather.",
-          "Time to knock everything off the counter!",
-          "The red dot has returned! My nemesis!",
-          "I must investigate this suspicious cardboard box."
-        ],
-        moody: [
-          "I am displeased with your recent performance, human.",
-          "You may pet me... but only on MY terms.",
-          "The dog looked at me funny. This cannot stand.",
-          "I require immediate attention, but don't you dare actually touch me."
-        ],
-        sleepy: [
-          "I shall grace this sunbeam with my presence.",
-          "Do not disturb. I am conducting important cat business.",
-          "The world can wait. I have napping to do.",
-          "This warm laptop keyboard is the perfect pillow."
-        ],
-        default: [
-          "I suppose you're adequate, human.",
-          "You may continue to serve me.",
-          "I acknowledge your existence.",
-          "Perhaps we can coexist peacefully today."
-        ]
-      },
-      bird: {
-        hungry: [
-          "Seeds! Beautiful, delicious seeds!",
-          "My crops need filling, stat!",
-          "Time for breakfast, lunch, and dinner!",
-          "I spy with my little eye... FOOD!"
-        ],
-        playful: [
-          "Let's sing the song of our people!",
-          "Watch me do barrel rolls around the cage!",
-          "Mirror bird, we meet again!",
-          "Time to show off my dance moves!"
-        ],
-        moody: [
-          "I demand to speak to the manager!",
-          "This cage is clearly too small for my magnificence.",
-          "Where's my privacy? A bird needs space!",
-          "I'm filing a complaint with bird resources."
-        ],
-        sleepy: [
-          "One eye open, watching for predators...",
-          "Perch time is sacred time.",
-          "Tucking my head under my wing now.",
-          "The early bird can wait until tomorrow."
-        ],
-        default: [
-          "Hello! Hello! Pretty bird!",
-          "The view from up here is fantastic!",
-          "I love singing in the morning!",
-          "Flight patterns are looking good today!"
-        ]
-      }
-    }
-
-    // Get translations for the pet type
-    const petTranslations = translations[petType as keyof typeof translations] || translations.dog
-    const modeTranslations = petTranslations[mode as keyof typeof petTranslations] || petTranslations.default
+    // Build the prompt based on pet type and mode
+    let translationPrompt = `You are a professional pet translator. A ${petType} just made a sound. `
     
-    // Pick a random translation
-    const translation = modeTranslations[Math.floor(Math.random() * modeTranslations.length)]
-
-    // Calculate confidence score (simulate AI confidence)
-    const confidence = Math.random() * 0.3 + 0.7 // Between 70-100%
-
-    // Get pet info for personalized response
-    const { data: pet } = await supabaseClient
-      .from('pets')
-      .select('name, type, breed')
-      .eq('id', petId)
-      .eq('user_id', user.id)
-      .single()
-
-    let personalizedTranslation = translation
-    if (pet?.name) {
-      // Add pet's name to some translations
-      if (Math.random() > 0.3) {
-        personalizedTranslation = `${pet.name} says: "${translation}"`
-      }
+    if (mode === 'hungry') {
+      translationPrompt += `The sound was likely related to being hungry or wanting food. `
+    } else if (mode === 'playful') {
+      translationPrompt += `The sound was likely playful and energetic, wanting to play. `
+    } else if (mode === 'moody') {
+      translationPrompt += `The sound was likely moody or expressing some annoyance. `
     }
+
+    translationPrompt += `Translate what the ${petType} is trying to say into a short, fun, and relatable human sentence. Keep it under 20 words. Be creative and entertaining but accurate to the context. The translation should sound like something the pet would actually be thinking or feeling.`
+
+    // Call Lovable AI Gateway
+    console.log('Calling Lovable AI Gateway...')
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a pet translator that converts pet sounds into fun, relatable human language. Keep translations short, entertaining, and accurate to the context.'
+          },
+          {
+            role: 'user',
+            content: translationPrompt
+          }
+        ],
+        temperature: 0.8,
+        max_tokens: 100,
+      }),
+    })
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text()
+      console.error('AI Gateway error:', aiResponse.status, errorText)
+      
+      if (aiResponse.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again in a moment.')
+      }
+      if (aiResponse.status === 402) {
+        throw new Error('AI credits exhausted. Please add credits to continue.')
+      }
+      
+      throw new Error(`AI Gateway error: ${aiResponse.status}`)
+    }
+
+    const aiData = await aiResponse.json()
+    const translationText = aiData.choices[0].message.content.trim()
+
+    console.log('Translation generated:', translationText)
 
     // Save translation to database
-    const { data: savedTranslation, error: saveError } = await supabaseClient
+    const { data: translation, error: insertError } = await supabase
       .from('translations')
       .insert({
         user_id: user.id,
-        pet_id: petId,
+        pet_id: petId !== 'default' ? petId : null,
+        translation_text: translationText,
+        translation_mode: mode,
         original_audio_url: audioUrl,
-        translation_text: personalizedTranslation,
-        translation_mode: mode || 'default',
-        confidence_score: confidence,
-        treat_points_earned: 10
+        treat_points_earned: 1,
       })
       .select()
       .single()
 
-    if (saveError) {
-      console.error('Error saving translation:', saveError)
+    if (insertError) {
+      console.error('Error saving translation:', insertError)
+      throw insertError
     }
 
     // Update user's treat points
-    await supabaseClient.rpc('increment_treat_points', { 
-      user_uuid: user.id, 
-      points: 10 
-    })
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('treat_points')
+      .eq('id', user.id)
+      .single()
 
-    // Update daily streak
-    await supabaseClient.rpc('update_daily_streak', { 
-      user_uuid: user.id 
-    })
-
-    // Check and award badges
-    await supabaseClient.rpc('check_and_award_badges', { 
-      user_uuid: user.id 
-    })
+    if (profile) {
+      await supabase
+        .from('profiles')
+        .update({ 
+          treat_points: (profile.treat_points || 0) + 1
+        })
+        .eq('id', user.id)
+    }
 
     return new Response(
       JSON.stringify({
-        success: true,
-        translation: personalizedTranslation,
-        confidence,
-        treatPointsEarned: 10,
-        translationId: savedTranslation?.id
+        translation: translationText,
+        treatPoints: 1,
+        translationId: translation.id,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      },
+      }
     )
   } catch (error) {
-    console.error('Translation error:', error)
+    console.error('Error in translate-pet-sound:', error)
     return new Response(
       JSON.stringify({ 
-        error: 'Failed to translate pet sound',
-        details: error.message 
+        error: error.message || 'Translation failed',
+        details: error.toString()
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
-      },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
     )
   }
 })

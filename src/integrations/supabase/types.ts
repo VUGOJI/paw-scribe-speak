@@ -14,35 +14,207 @@ export type Database = {
   }
   public: {
     Tables: {
+      badges: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          is_premium_only: boolean
+          name: string
+          requirement_type: string
+          requirement_value: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          icon: string
+          id?: string
+          is_premium_only?: boolean
+          name: string
+          requirement_type: string
+          requirement_value?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          is_premium_only?: boolean
+          name?: string
+          requirement_type?: string
+          requirement_value?: number | null
+        }
+        Relationships: []
+      }
+      pets: {
+        Row: {
+          birthday: string | null
+          breed: string | null
+          created_at: string
+          favorite_mode: string | null
+          id: string
+          is_active: boolean
+          name: string
+          personality_traits: string[] | null
+          photo_url: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          birthday?: string | null
+          breed?: string | null
+          created_at?: string
+          favorite_mode?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          personality_traits?: string[] | null
+          photo_url?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          birthday?: string | null
+          breed?: string | null
+          created_at?: string
+          favorite_mode?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          personality_traits?: string[] | null
+          photo_url?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
+          daily_streak: number
           display_name: string | null
           favorite_pet: string | null
           id: string
+          last_translation_date: string | null
+          treat_points: number
           updated_at: string
           username: string | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          daily_streak?: number
           display_name?: string | null
           favorite_pet?: string | null
           id: string
+          last_translation_date?: string | null
+          treat_points?: number
           updated_at?: string
           username?: string | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          daily_streak?: number
           display_name?: string | null
           favorite_pet?: string | null
           id?: string
+          last_translation_date?: string | null
+          treat_points?: number
           updated_at?: string
           username?: string | null
         }
         Relationships: []
+      }
+      translations: {
+        Row: {
+          audio_duration_seconds: number | null
+          confidence_score: number | null
+          created_at: string
+          id: string
+          is_shared: boolean
+          original_audio_url: string | null
+          pet_id: string | null
+          translation_mode: string | null
+          translation_text: string
+          treat_points_earned: number
+          user_id: string
+          voice_type: string | null
+        }
+        Insert: {
+          audio_duration_seconds?: number | null
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          is_shared?: boolean
+          original_audio_url?: string | null
+          pet_id?: string | null
+          translation_mode?: string | null
+          translation_text: string
+          treat_points_earned?: number
+          user_id: string
+          voice_type?: string | null
+        }
+        Update: {
+          audio_duration_seconds?: number | null
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          is_shared?: boolean
+          original_audio_url?: string | null
+          pet_id?: string | null
+          translation_mode?: string | null
+          translation_text?: string
+          treat_points_earned?: number
+          user_id?: string
+          voice_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "translations_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
