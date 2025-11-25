@@ -13,7 +13,7 @@ const TranslationResult = () => {
   const { toast } = useToast();
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const { translation, petType = "dog", mode, isNew } = location.state || {};
+  const { translation, petType = "dog", mode, isNew, audioUrl } = location.state || {};
 
   useEffect(() => {
     // If no translation data, redirect to home
@@ -128,6 +128,21 @@ const TranslationResult = () => {
             Share
           </Button>
         </div>
+
+        {/* Original Recording Playback */}
+        {audioUrl && (
+          <Card className="pet-card w-full max-w-md">
+            <div className="flex items-center gap-3">
+              <Volume2 className="w-5 h-5 text-primary" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Original Recording</p>
+                <audio controls className="w-full mt-2" src={audioUrl}>
+                  Your browser does not support the audio element.
+                </audio>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Try Again Button */}
         <Button
