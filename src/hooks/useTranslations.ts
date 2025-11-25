@@ -35,18 +35,18 @@ export const useTranslatePetSound = () => {
       petType, 
       petId, 
       mode, 
-      audioUrl 
+      audioData 
     }: { 
       petType: string
       petId: string
       mode?: string
-      audioUrl?: string 
+      audioData?: string 
     }) => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
 
       const response = await supabase.functions.invoke('translate-pet-sound', {
-        body: { petType, petId, mode, audioUrl },
+        body: { petType, petId, mode, audioData },
       })
 
       if (response.error) throw response.error

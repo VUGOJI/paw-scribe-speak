@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { petType, petId, mode, audioUrl } = await req.json()
+    const { petType, petId, mode, audioData } = await req.json()
     console.log('Translation request:', { petType, petId, mode })
 
     // Get LOVABLE_API_KEY from environment
@@ -39,6 +39,30 @@ serve(async (req) => {
 
     if (userError || !user) {
       throw new Error('Unauthorized')
+    }
+
+    // Upload audio to storage if provided
+    let audioUrl: string | null = null
+    if (audioData) {
+      const audioBuffer = Uint8Array.from(atob(audioData), c => c.charCodeAt(0))
+      const fileName = `${user.id}/${Date.now()}.webm`
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('pet-audio')
+        .upload(fileName, audioBuffer, {
+          contentType: 'audio/webm',
+          upsert: false
+        })
+
+      if (uploadError) {
+        console.error('Audio upload error:', uploadError)
+      } else {
+        const { data: urlData } = supabase.storage
+          .from('pet-audio')
+          .getPublicUrl(fileName)
+        audioUrl = urlData.publicUrl
+        console.log('Audio uploaded:', audioUrl)
+      }
     }
 
     // Build the prompt based on pet type and mode
@@ -138,6 +162,7 @@ serve(async (req) => {
         translation: translationText,
         treatPoints: 1,
         translationId: translation.id,
+        audioUrl: audioUrl,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

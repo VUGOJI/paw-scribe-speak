@@ -51,7 +51,7 @@ const Home = () => {
             const result = await translateMutation.mutateAsync({
               petType: currentPet,
               petId: activePet?.id || 'default',
-              audioUrl: base64Data,
+              audioData: base64Data,
             });
 
             clearRecording();
@@ -60,6 +60,7 @@ const Home = () => {
                 translation: result.translation,
                 petType: currentPet,
                 confidence: result.confidence,
+                audioUrl: result.audioUrl,
                 isNew: true
               }
             });
