@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -14,10 +15,12 @@ serve(async (req) => {
 
   try {
     const { petType, petId, mode, audioData } = await req.json()
-    console.log('Translation request:', { petType, petId, mode })
+    console.log('Translation request:', { petType, petId, mode, hasAudio: !!audioData })
 
-    // Get LOVABLE_API_KEY from environment
+    // Get API keys from environment
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
+    
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured')
     }
@@ -41,13 +44,16 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Upload audio to storage if provided
+    // Upload audio to storage if provided and transcribe it
     let audioUrl: string | null = null
-    if (audioData) {
+    let audioTranscription: string | null = null
+    
+    if (audioData && OPENAI_API_KEY) {
+      // Upload to storage
       const audioBuffer = Uint8Array.from(atob(audioData), c => c.charCodeAt(0))
       const fileName = `${user.id}/${Date.now()}.webm`
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('pet-audio')
         .upload(fileName, audioBuffer, {
           contentType: 'audio/webm',
@@ -62,24 +68,58 @@ serve(async (req) => {
           .getPublicUrl(fileName)
         audioUrl = urlData.publicUrl
         console.log('Audio uploaded:', audioUrl)
+
+        // Transcribe the audio using OpenAI Whisper
+        try {
+          console.log('Transcribing audio with Whisper...')
+          const formData = new FormData()
+          const blob = new Blob([audioBuffer], { type: 'audio/webm' })
+          formData.append('file', blob, 'audio.webm')
+          formData.append('model', 'whisper-1')
+          formData.append('language', 'en')
+
+          const transcriptionResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            },
+            body: formData,
+          })
+
+          if (transcriptionResponse.ok) {
+            const transcriptionData = await transcriptionResponse.json()
+            audioTranscription = transcriptionData.text
+            console.log('Audio transcription:', audioTranscription)
+          } else {
+            console.error('Transcription failed:', await transcriptionResponse.text())
+          }
+        } catch (transcribeError) {
+          console.error('Transcription error:', transcribeError)
+        }
       }
     }
 
-    // Build the prompt based on pet type and mode
+    // Build the prompt based on pet type, mode, and transcription
     let translationPrompt = `You are a professional pet translator. A ${petType} just made a sound. `
     
+    if (audioTranscription) {
+      translationPrompt += `The actual sounds detected were: "${audioTranscription}". `
+    }
+    
     if (mode === 'hungry') {
-      translationPrompt += `The sound was likely related to being hungry or wanting food. `
+      translationPrompt += `The context suggests the pet might be hungry or wanting food. `
     } else if (mode === 'playful') {
-      translationPrompt += `The sound was likely playful and energetic, wanting to play. `
+      translationPrompt += `The context suggests the pet is playful and energetic, wanting to play. `
     } else if (mode === 'moody') {
-      translationPrompt += `The sound was likely moody or expressing some annoyance. `
+      translationPrompt += `The context suggests the pet is moody or expressing some annoyance. `
+    } else if (mode === 'sleepy') {
+      translationPrompt += `The context suggests the pet is tired or sleepy. `
     }
 
-    translationPrompt += `Translate what the ${petType} is trying to say into a short, fun, and relatable human sentence. Keep it under 20 words. Be creative and entertaining but accurate to the context. The translation should sound like something the pet would actually be thinking or feeling.`
+    translationPrompt += `Based on ${audioTranscription ? 'the actual sounds and ' : ''}the ${petType}'s typical behavior, translate what they're trying to say into a short, fun, and relatable human sentence. Keep it under 20 words. Be creative and entertaining but accurate to what a ${petType} would actually be thinking or feeling in this situation.`
 
     // Call Lovable AI Gateway
-    console.log('Calling Lovable AI Gateway...')
+    console.log('Calling Lovable AI Gateway for translation...')
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -91,7 +131,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a pet translator that converts pet sounds into fun, relatable human language. Keep translations short, entertaining, and accurate to the context.'
+            content: 'You are a pet translator that converts pet sounds and behaviors into fun, relatable human language. Keep translations short, entertaining, and accurate to the context.'
           },
           {
             role: 'user',
@@ -132,6 +172,7 @@ serve(async (req) => {
         translation_mode: mode,
         original_audio_url: audioUrl,
         treat_points_earned: 1,
+        confidence_score: audioTranscription ? 0.95 : 0.75,
       })
       .select()
       .single()
@@ -163,6 +204,7 @@ serve(async (req) => {
         treatPoints: 1,
         translationId: translation.id,
         audioUrl: audioUrl,
+        transcription: audioTranscription,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
